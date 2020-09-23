@@ -2,20 +2,27 @@ package main
 
 import (
 	"context"
+	"flag"
+	"io/ioutil"
 	"log"
-	"os"
+	"os/exec"
 	"time"
 
 	"google.golang.org/grpc"
 	pb "grpc-hw/pkg/helloworld"
 )
 
-const (
+var (
 	address     = "localhost:50051"
+	name        = ""
 	defaultName = "world"
 )
 
 func main() {
+	flag.StringVar(&address, "addr", address, "server address")
+	flag.StringVar(&name, "name", "world", "name")
+	flag.Parse()
+
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -25,15 +32,14 @@ func main() {
 	c := pb.NewGreeterClient(conn)
 
 	// Contact the server and print out its response.
-	name := defaultName
-	if len(os.Args) > 1 {
-		name = os.Args[1]
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	r, err := c.SayHello(ctx, &pb.HelloRequest{Name: name})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
-	log.Printf("Greeting: %s", r.GetMessage())
+
+	tempFile := "cli.wav"
+	ioutil.WriteFile(tempFile, r.Message, 0666)
+	exec.Command("afplay", tempFile).Run()
 }

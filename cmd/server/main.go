@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
+	"os/exec"
 
 	"google.golang.org/grpc"
 	pb "grpc-hw/pkg/helloworld"
@@ -21,7 +24,13 @@ type server struct {
 // SayHello implements helloworld.GreeterServer
 func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	log.Printf("Received: %v", in.GetName())
-	return &pb.HelloReply{Message: "Hello " + in.GetName()}, nil
+	tempFile := "srv.wav"
+	err := exec.Command("flite", "-t", "Hello "+in.GetName(), "-o", tempFile).Run()
+	if err != nil {
+		return nil, fmt.Errorf("make audio failed: %v", err)
+	}
+	data, _ := ioutil.ReadFile(tempFile)
+	return &pb.HelloReply{Message: data}, nil
 }
 
 func main() {
